@@ -10,9 +10,9 @@ class UserRole(str, Enum):
 
 
 class SignupRequest(BaseModel):
+    # No role field — role is never client-supplied. See auth.py:signup().
     email: EmailStr
     password: str
-    role: UserRole = UserRole.USER
 
 
 class LoginRequest(BaseModel):
@@ -32,3 +32,7 @@ class UserSummary(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     user: UserSummary
+
+
+class RoleUpdateRequest(BaseModel):
+    role: UserRole

@@ -31,12 +31,12 @@ export function UploadDropzone({ projectId, onUploaded, onError }: Props) {
       <input {...getInputProps()} />
       <svg
         className="dropzone-icon"
-        width="28"
-        height="28"
+        width="16"
+        height="16"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.8"
       >
         <path
           d="M12 15V4M12 4l-4 4M12 4l4 4M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"
@@ -44,10 +44,10 @@ export function UploadDropzone({ projectId, onUploaded, onError }: Props) {
           strokeLinejoin="round"
         />
       </svg>
-      <p>
-        Drag and drop invoices here, or click to browse
+      <span>
+        Drag and drop, or click to upload
         <span className="dropzone-hint">PDF, PNG, JPG, TIFF</span>
-      </p>
+      </span>
     </div>
   );
 }

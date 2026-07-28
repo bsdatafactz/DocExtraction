@@ -4,21 +4,23 @@ composite = 0.5 * self_reported (from the LLM) + 0.5 * heuristic_score
 (format validity, cross-field reconciliation). Fields marked not_applicable
 are excluded entirely rather than penalized — a genuinely absent field
 shouldn't lower a document's confidence the way a failed extraction should.
+
+Schema-agnostic: works on any ExtractionMeta subclass (InvoiceExtraction,
+ResumeExtraction, ...). The two reconciliation checks below are
+invoice-specific and simply never fire for a schema without those field
+names (guarded with getattr, not a hard dependency on InvoiceExtraction).
 """
+
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.schemas.confidence import DocumentConfidence, FieldConfidence
-from app.schemas.invoice import FieldStatus, InvoiceExtraction
+from app.schemas.extraction_base import ExtractionMeta, FieldStatus
 
 # Baseline for fields with no dedicated reconciliation check below — not
 # zero (an extracted value is still evidence) and not high enough to mask
 # fields we haven't built specific checks for yet.
 _DEFAULT_HEURISTIC = 0.6
-
-# These carry the confidence/status data itself — never treat them as
-# extracted invoice fields, or the fallback below scores "field_status"
-# against itself as if it were a real field.
-_META_FIELDS = {"field_status", "self_reported_confidence"}
 
 # A confirmed disagreement between the two models on an escalated field is
 # strong evidence the value is wrong — cap confidence regardless of what
@@ -26,8 +28,12 @@ _META_FIELDS = {"field_status", "self_reported_confidence"}
 _DISAGREEMENT_CAP = 0.4
 
 
-def _default_tracked_fields() -> list[str]:
-    return [name for name in InvoiceExtraction.model_fields if name not in _META_FIELDS]
+def _default_tracked_fields(extraction: BaseModel) -> list[str]:
+    # Derived from the extraction's own (schema-specific) fields, minus the
+    # ExtractionMeta fields every schema inherits — works for any
+    # implemented document type, not just invoices.
+    meta_fields = set(ExtractionMeta.model_fields)
+    return [name for name in type(extraction).model_fields if name not in meta_fields]
 
 
 def _values_match(a, b) -> bool:
@@ -40,28 +46,29 @@ def _values_match(a, b) -> bool:
     return a == b
 
 
-def _line_items_reconcile(extraction: InvoiceExtraction) -> float:
-    if not extraction.line_items or extraction.subtotal is None:
+def _line_items_reconcile(extraction: BaseModel) -> float:
+    line_items = getattr(extraction, "line_items", None)
+    subtotal = getattr(extraction, "subtotal", None)
+    if not line_items or subtotal is None:
         return 0.5  # no cross-check possible either way
-    total = sum(li.line_total or 0 for li in extraction.line_items)
-    return 1.0 if abs(total - extraction.subtotal) < 0.01 else 0.3
+    total = sum(li.line_total or 0 for li in line_items)
+    return 1.0 if abs(total - subtotal) < 0.01 else 0.3
 
 
 def _heuristic_score(
-    field_name: str, extraction: InvoiceExtraction, ocr_confidence: float | None = None
+    field_name: str, extraction: BaseModel, ocr_confidence: float | None = None
 ) -> float:
     value = getattr(extraction, field_name, None)
     if value in (None, "", []):
         return 0.0
 
+    subtotal = getattr(extraction, "subtotal", None)
+    tax_amount = getattr(extraction, "tax_amount", None)
+
     if field_name == "line_items":
         base = _line_items_reconcile(extraction)
-    elif (
-        field_name == "total_amount"
-        and extraction.subtotal is not None
-        and extraction.tax_amount is not None
-    ):
-        expected = extraction.subtotal + extraction.tax_amount
+    elif field_name == "total_amount" and subtotal is not None and tax_amount is not None:
+        expected = subtotal + tax_amount
         base = 1.0 if abs(expected - value) < 0.01 else 0.3
     else:
         base = _DEFAULT_HEURISTIC
@@ -75,9 +82,9 @@ def _heuristic_score(
 
 def score_document(
     document_id: int,
-    extraction: InvoiceExtraction,
+    extraction: BaseModel,
     escalated: bool = False,
-    prior_extraction: InvoiceExtraction | None = None,
+    prior_extraction: BaseModel | None = None,
     ocr_confidence: float | None = None,
 ) -> DocumentConfidence:
     """Score an extraction's per-field confidence.
@@ -95,7 +102,7 @@ def score_document(
     from a poorly-OCR'd page is less trustworthy regardless of what the LLM
     or reconciliation checks say about it.
     """
-    tracked_fields = list(extraction.field_status.keys()) or _default_tracked_fields()
+    tracked_fields = list(extraction.field_status.keys()) or _default_tracked_fields(extraction)
 
     fields: list[FieldConfidence] = []
     for name in tracked_fields:

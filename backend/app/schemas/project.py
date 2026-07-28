@@ -3,17 +3,16 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict
 
-# Matches the brief's own four allowed document types. Only INVOICE has a
-# real extraction schema/pipeline (see app/schemas/invoice.py) — the others
-# are genuine, selectable values, not placeholders, but a project created
-# with one of them can't have documents extracted yet.
-IMPLEMENTED_DOCUMENT_TYPES = {"invoice"}
+# Invoice and resume have real extraction schemas/pipelines (see
+# app/schemas/invoice.py and app/schemas/resume.py). Contract is a genuine,
+# selectable value, not a placeholder, but a project created with it can't
+# have documents extracted yet — no fields have been specified for it.
+IMPLEMENTED_DOCUMENT_TYPES = {"invoice", "resume"}
 
 
 class DocumentType(str, Enum):
     INVOICE = "invoice"
     RESUME = "resume"
-    PURCHASE_ORDER = "purchase_order"
     CONTRACT = "contract"
 
 

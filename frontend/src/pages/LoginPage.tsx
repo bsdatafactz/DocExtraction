@@ -27,7 +27,7 @@ export function LoginPage() {
   return (
     <div className="signin">
       <div className="signin-card">
-        <h1>Invoice Extraction</h1>
+        <h1>Document Extraction</h1>
         <p>Sign in to continue.</p>
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="error-banner">{error}</div>}

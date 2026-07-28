@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDashboard, listProjects } from "../api";
 import { useAuth } from "../AuthContext";
+import { FormTypesTab } from "../components/FormTypesTab";
 import { ProjectList } from "../components/ProjectList";
+import { StatusDistributionChart } from "../components/StatusDistributionChart";
+import { UploadTrendChart } from "../components/UploadTrendChart";
+import { UserManagement } from "../components/UserManagement";
 import type { DashboardStats, Project } from "../types";
 
 function errorMessage(err: unknown): string {
@@ -14,9 +18,13 @@ function formatSeconds(s: number | null): string {
   return s < 60 ? `${s.toFixed(1)}s` : `${(s / 60).toFixed(1)}m`;
 }
 
+type Tab = "overview" | "projects" | "users" | "types";
+
 export function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = user?.role === "admin";
+  const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +45,27 @@ export function HomePage() {
 
   return (
     <div>
+      {stats && (
+        <div className="stat-grid stat-grid--top">
+          <div className="stat-card">
+            <span className="stat-label">Total Users</span>
+            <span className="stat-value">{stats.total_users}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Total Projects</span>
+            <span className="stat-value">{stats.total_projects}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Total Uploads</span>
+            <span className="stat-value">{stats.total_documents}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Avg Processing Time</span>
+            <span className="stat-value">{formatSeconds(stats.avg_processing_seconds)}</span>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="error-banner">
           <span>{error}</span>
@@ -44,65 +73,55 @@ export function HomePage() {
         </div>
       )}
 
-      {stats && (
-        <div className="stat-grid">
-          <div className="stat-card">
-            <span className="stat-label">Total projects</span>
-            <span className="stat-value">{stats.total_projects}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Total documents</span>
-            <span className="stat-value">{stats.total_documents}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Needs review</span>
-            <span className="stat-value">{stats.status_counts.needs_review ?? 0}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Auto-approved (≥90%)</span>
-            <span className="stat-value">{stats.auto_approved_count}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Manually reviewed</span>
-            <span className="stat-value">{stats.reviewed_count}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Scanned documents</span>
-            <span className="stat-value">{stats.scanned_count}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Avg. parsing time</span>
-            <span className="stat-value">{formatSeconds(stats.avg_parsing_seconds)}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Avg. extraction time</span>
-            <span className="stat-value">{formatSeconds(stats.avg_extraction_seconds)}</span>
-          </div>
-          <div className="stat-card stat-card--warn">
-            <span className="stat-label">Escalated to stronger model</span>
-            <span className="stat-value">
-              {stats.escalation_count}{" "}
-              <span className="stat-sub">({Math.round(stats.escalation_rate * 100)}%)</span>
-            </span>
-          </div>
-          <div className="stat-card stat-card--error">
-            <span className="stat-label">Failed</span>
-            <span className="stat-value">
-              {stats.error_count}{" "}
-              <span className="stat-sub">({Math.round(stats.error_rate * 100)}%)</span>
-            </span>
-          </div>
+      <div className="section-tabs section-tabs--top">
+        <button
+          className={`section-tab ${tab === "overview" ? "section-tab--active" : ""}`}
+          onClick={() => setTab("overview")}
+        >
+          Overview
+        </button>
+        <button
+          className={`section-tab ${tab === "projects" ? "section-tab--active" : ""}`}
+          onClick={() => setTab("projects")}
+        >
+          Projects
+        </button>
+        {isAdmin && (
+          <button
+            className={`section-tab ${tab === "users" ? "section-tab--active" : ""}`}
+            onClick={() => setTab("users")}
+          >
+            User Management
+          </button>
+        )}
+        <button
+          className={`section-tab ${tab === "types" ? "section-tab--active" : ""}`}
+          onClick={() => setTab("types")}
+        >
+          Form Types
+        </button>
+      </div>
+
+      {tab === "overview" && stats && (
+        <div className="charts-grid">
+          <UploadTrendChart data={stats.daily_uploads} />
+          <StatusDistributionChart statusCounts={stats.status_counts} />
         </div>
       )}
 
-      <h2 className="section-heading">Projects</h2>
-      <ProjectList
-        projects={projects}
-        onSelect={(p) => navigate(`/projects/${p.id}/upload`)}
-        onCreated={refresh}
-        onError={(err) => setError(errorMessage(err))}
-        isAdmin={user?.role === "admin"}
-      />
+      {tab === "projects" && (
+        <ProjectList
+          projects={projects}
+          onSelect={(p) => navigate(`/projects/${p.id}/upload`)}
+          onCreated={refresh}
+          onError={(err) => setError(errorMessage(err))}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {tab === "users" && isAdmin && <UserManagement />}
+
+      {tab === "types" && <FormTypesTab />}
     </div>
   );
 }

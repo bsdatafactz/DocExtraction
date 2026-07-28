@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import * as api from "./api";
-import { clearAuth, getStoredToken, getStoredUser, setAuth, type AuthUser, type Role } from "./auth";
+import { clearAuth, getStoredToken, getStoredUser, setAuth, type AuthUser } from "./auth";
 
 interface AuthContextValue {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, role: Role) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -22,8 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   }
 
-  async function signup(email: string, password: string, role: Role) {
-    const res = await api.signup(email, password, role);
+  async function signup(email: string, password: string) {
+    const res = await api.signup(email, password);
     setAuth(res.access_token, res.user);
     setUser(res.user);
   }

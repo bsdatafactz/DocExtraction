@@ -5,24 +5,12 @@ what extraction results are validated against before anything is persisted.
 """
 
 from datetime import date
-from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.schemas.extraction_base import ExtractionMeta, FieldStatus
 
-class FieldStatus(str, Enum):
-    """Distinguishes "couldn't extract" from "doesn't exist on this document".
-
-    A null value alone is ambiguous — did the model fail to find a due date,
-    or does this invoice simply not have payment terms? Collapsing both into
-    None would corrupt confidence scoring (a genuinely absent field should
-    not be penalized as a low-confidence extraction) and the accuracy report
-    (ground truth needs the same three-way distinction to score fairly).
-    """
-
-    EXTRACTED = "extracted"
-    NOT_APPLICABLE = "not_applicable"
-    ILLEGIBLE = "illegible"
+__all__ = ["FieldStatus", "LineItem", "InvoiceExtraction"]
 
 
 class LineItem(BaseModel):
@@ -32,7 +20,7 @@ class LineItem(BaseModel):
     line_total: float | None = None
 
 
-class InvoiceExtraction(BaseModel):
+class InvoiceExtraction(ExtractionMeta):
     invoice_number: str | None = None
     invoice_date: date | None = None
     due_date: date | None = None
@@ -48,16 +36,3 @@ class InvoiceExtraction(BaseModel):
     total_amount: float | None = None
     payment_terms: str | None = None
     line_items: list[LineItem] = Field(default_factory=list)
-
-    field_status: dict[str, FieldStatus] = Field(
-        default_factory=dict,
-        description="Per top-level field name, whether it was extracted, "
-        "is not applicable to this document, or was present but illegible.",
-    )
-    self_reported_confidence: dict[str, float] = Field(
-        default_factory=dict,
-        description="Per top-level field name, the model's own 0-1 "
-        "confidence in the extracted value. Only meaningful for fields "
-        "with status EXTRACTED; combined downstream with heuristic checks "
-        "into a composite score — never used alone as the final confidence.",
-    )

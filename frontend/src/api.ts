@@ -34,11 +34,11 @@ export interface AuthResponse {
   user: { id: number; email: string; role: "admin" | "user"; created_at: string };
 }
 
-export function signup(email: string, password: string, role: "admin" | "user"): Promise<AuthResponse> {
+export function signup(email: string, password: string): Promise<AuthResponse> {
   return request("/auth/signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, role }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
@@ -112,4 +112,29 @@ export function submitCorrections(
 
 export function getDashboard(): Promise<DashboardStats> {
   return request("/dashboard");
+}
+
+// ---- Users (admin only) ----
+
+export interface UserSummary {
+  id: number;
+  email: string;
+  role: "admin" | "user";
+  created_at: string;
+}
+
+export function listUsers(): Promise<UserSummary[]> {
+  return request("/users");
+}
+
+export function updateUserRole(id: number, role: "admin" | "user"): Promise<UserSummary> {
+  return request(`/users/${id}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function deleteUser(id: number): Promise<void> {
+  return request(`/users/${id}`, { method: "DELETE" });
 }

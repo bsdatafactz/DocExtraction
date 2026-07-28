@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.document import Document, Extraction, FieldConfidenceRecord
 from app.schemas.document import DocumentStatus
+from app.schemas.registry import get_extraction_schema
 from app.services import confidence as confidence_service
 from app.services import extraction as extraction_service
 from app.services import parsing as parsing_service
@@ -26,6 +27,8 @@ def run_pipeline(document_id: int) -> None:
         if document is None:
             return
 
+        schema_cls, prompt_intro = get_extraction_schema(document.project.document_type)
+
         document.status = DocumentStatus.PARSING.value
         document.parsing_started_at = datetime.utcnow()
         db.commit()
@@ -39,7 +42,7 @@ def run_pipeline(document_id: int) -> None:
         document.status = DocumentStatus.EXTRACTING.value
         document.extraction_started_at = datetime.utcnow()
         db.commit()
-        result = extraction_service.extract_with_deepseek(parsed.full_text)
+        result = extraction_service.extract_with_deepseek(parsed.full_text, schema_cls, prompt_intro)
         db.add(
             Extraction(
                 document_id=document.id,
@@ -53,7 +56,9 @@ def run_pipeline(document_id: int) -> None:
         if confidence_service.needs_escalation(conf):
             document.status = DocumentStatus.ESCALATED.value
             db.commit()
-            escalated_result = extraction_service.extract_with_azure_openai(parsed.full_text)
+            escalated_result = extraction_service.extract_with_azure_openai(
+                parsed.full_text, schema_cls, prompt_intro
+            )
             db.add(
                 Extraction(
                     document_id=document.id,

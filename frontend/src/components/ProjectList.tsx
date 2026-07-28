@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createProject, deleteProject } from "../api";
+import { DOCUMENT_TYPES } from "../constants";
 import type { DocumentType, Project } from "../types";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -10,13 +11,6 @@ interface Props {
   onError: (err: unknown) => void;
   isAdmin: boolean;
 }
-
-const DOCUMENT_TYPES: Array<{ value: DocumentType; label: string; implemented: boolean }> = [
-  { value: "invoice", label: "Invoices", implemented: true },
-  { value: "resume", label: "Resumes", implemented: false },
-  { value: "purchase_order", label: "Purchase orders", implemented: false },
-  { value: "contract", label: "Contracts", implemented: false },
-];
 
 export function ProjectList({ projects, onSelect, onCreated, onError, isAdmin }: Props) {
   const [creating, setCreating] = useState(false);

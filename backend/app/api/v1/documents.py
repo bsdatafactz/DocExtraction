@@ -23,6 +23,8 @@ from app.schemas.document import (
 )
 from app.schemas.invoice import InvoiceExtraction
 from app.schemas.project import IMPLEMENTED_DOCUMENT_TYPES
+from app.schemas.registry import get_extraction_schema
+from app.schemas.resume import ResumeExtraction
 from app.services.pipeline import run_pipeline
 
 # Creating/listing documents is scoped to a project — a document only makes
@@ -116,6 +118,7 @@ def get_document(
     confidence = _document_confidence(document)
 
     detail = DocumentDetail.model_validate(document)
+    detail.document_type = document.project.document_type
     detail.aggregate_confidence = confidence.aggregate if confidence else None
     detail.extraction = extraction
     detail.confidence = confidence
@@ -193,11 +196,12 @@ def submit_corrections(
     return get_document(document_id, db, admin)
 
 
-def _latest_extraction(document: Document) -> InvoiceExtraction | None:
+def _latest_extraction(document: Document) -> InvoiceExtraction | ResumeExtraction | None:
     if not document.extractions:
         return None
     latest = max(document.extractions, key=lambda e: e.created_at)
-    return InvoiceExtraction.model_validate(latest.raw_json)
+    schema_cls, _ = get_extraction_schema(document.project.document_type)
+    return schema_cls.model_validate(latest.raw_json)
 
 
 def _document_confidence(document: Document) -> DocumentConfidence | None:

@@ -1,4 +1,5 @@
 from app.schemas.invoice import FieldStatus, InvoiceExtraction, LineItem
+from app.schemas.resume import ResumeExtraction, WorkExperience
 from app.services import confidence as confidence_service
 
 
@@ -114,3 +115,18 @@ def test_ocr_confidence_none_leaves_heuristic_unchanged():
     no_ocr = confidence_service.score_document(1, extraction)
     explicit_full = confidence_service.score_document(1, extraction, ocr_confidence=1.0)
     assert no_ocr.fields[0].heuristic_score == explicit_full.fields[0].heuristic_score
+
+
+def test_score_document_works_for_resume_schema_too():
+    # Confidence scoring is schema-agnostic — this would fail if the
+    # fallback tracked-fields logic still hardcoded InvoiceExtraction.
+    extraction = ResumeExtraction(
+        full_name="Jane Doe",
+        work_experience=[WorkExperience(company="Acme", title="Engineer")],
+    )
+    result = confidence_service.score_document(1, extraction)
+    names = {f.field_name for f in result.fields}
+    assert "full_name" in names
+    assert "work_experience" in names
+    assert "invoice_number" not in names
+    assert "field_status" not in names

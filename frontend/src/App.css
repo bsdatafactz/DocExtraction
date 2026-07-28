@@ -101,19 +101,24 @@ input {
 /* Upload dropzone */
 
 .dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
   border: 1.5px dashed var(--border);
-  border-radius: 14px;
-  padding: 3rem 1rem;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
   text-align: center;
   cursor: pointer;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   color: var(--text-muted);
   background: var(--panel);
+  font-size: 0.88rem;
 }
 
 .dropzone-icon {
-  margin-bottom: 0.6rem;
   opacity: 0.6;
+  flex-shrink: 0;
 }
 
 .dropzone:hover {
@@ -132,10 +137,9 @@ input {
 }
 
 .dropzone-hint {
-  display: block;
   font-size: 0.8rem;
-  margin-top: 0.35rem;
   opacity: 0.75;
+  margin-left: 0.4rem;
 }
 
 /* Queue */
@@ -297,6 +301,35 @@ input {
 
 .review-panel-header h3 {
   margin-bottom: 0;
+}
+
+.section-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.section-tab:hover {
+  color: var(--text);
+}
+
+.section-tab--active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Document viewer — width is the only hard constraint: every page is fit
@@ -553,6 +586,15 @@ input {
 
 .project-card--new:hover {
   color: var(--accent);
+}
+
+.project-card--static {
+  cursor: default;
+}
+
+.project-card--static:hover {
+  border-color: var(--border);
+  transform: none;
 }
 
 .project-card-plus {
@@ -836,6 +878,14 @@ input {
   margin-bottom: 1rem;
 }
 
+.stat-grid--top {
+  margin-bottom: 1.75rem;
+}
+
+.section-tabs--top {
+  margin-bottom: 1.5rem;
+}
+
 .stat-card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -869,4 +919,144 @@ input {
 
 .stat-card--error .stat-value {
   color: var(--red);
+}
+
+/* Charts — validated categorical/status colors, scoped locally per the
+   dataviz method (swap-in-one-place light/dark, not the app's badge
+   colors directly: those failed the chart-lightness-band check as-is). */
+
+.viz-root {
+  --chart-line: #4a5cf0;
+  --chart-good: #15803d;
+  --chart-warn: #c99700;
+  --chart-bad: #dc2626;
+  --chart-grid: #e1e0d9;
+  --chart-axis-text: #898781;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    --chart-line: #8b9bff;
+    --chart-good: #1caa6e;
+    --chart-warn: #c98500;
+    --chart-bad: #e5484d;
+    --chart-grid: #2c2c2a;
+    --chart-axis-text: #898781;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  --chart-line: #8b9bff;
+  --chart-good: #1caa6e;
+  --chart-warn: #c98500;
+  --chart-bad: #e5484d;
+  --chart-grid: #2c2c2a;
+  --chart-axis-text: #898781;
+}
+
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+
+.chart-card svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-gridline {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart-axis-label {
+  fill: var(--chart-axis-text);
+  font-size: 9px;
+}
+
+.chart-line {
+  stroke: var(--chart-line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-point {
+  fill: var(--chart-line);
+  cursor: pointer;
+}
+
+.chart-crosshair {
+  stroke: var(--chart-axis-text);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.chart-tooltip {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.bar-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.bar-track {
+  height: 10px;
+  background: var(--panel-raised);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.bar-value {
+  font-size: 0.82rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-value-pct {
+  color: var(--text-muted);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
 }

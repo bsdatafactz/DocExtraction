@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.schemas.confidence import DocumentConfidence
 from app.schemas.invoice import InvoiceExtraction
+from app.schemas.resume import ResumeExtraction
 
 
 class DocumentStatus(str, Enum):
@@ -30,7 +31,13 @@ class DocumentSummary(BaseModel):
 
 
 class DocumentDetail(DocumentSummary):
-    extraction: InvoiceExtraction | None = None
+    # The frontend needs to know which schema `extraction` validated
+    # against to render the right field set — see app/schemas/registry.py.
+    # Default is a placeholder; always overwritten from document.project
+    # after model_validate (Document has no document_type attribute of its
+    # own to auto-populate from).
+    document_type: str = ""
+    extraction: InvoiceExtraction | ResumeExtraction | None = None
     confidence: DocumentConfidence | None = None
 
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
@@ -16,10 +17,16 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)) -> TokenRespon
     if existing is not None:
         raise HTTPException(status_code=400, detail="An account with this email already exists")
 
+    # Role is never client-supplied — the very first account in the system
+    # is the one automatic admin (bootstrap); everyone after that starts as
+    # a plain user. Only an existing admin can promote someone else
+    # afterward (see users.py). Without this, "admin" is meaningless: anyone
+    # could just self-select it at signup.
+    is_first_user = (db.query(func.count(User.id)).scalar() or 0) == 0
     user = User(
         email=request.email,
         password_hash=hash_password(request.password),
-        role=request.role.value,
+        role="admin" if is_first_user else "user",
     )
     db.add(user)
     db.commit()
