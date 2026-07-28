@@ -1,0 +1,63 @@
+{
+  "source_image": "digital_08.jpg",
+  "source_dataset": "mychen76/invoices-and-receipts_ocr_v1",
+  "invoice_number": "65507091",
+  "invoice_date": "07/30/2014",
+  "due_date": null,
+  "po_number": null,
+  "vendor_name": "Pacheco, Simmons and Coleman 241 Heidi Vista Apt. 333 Odomville, DC 06454",
+  "vendor_address": null,
+  "vendor_tax_id": "989-80-0526",
+  "customer_name": "Hensley LLC 875 Jessica Course Apt. 269 North Kari, LA 34931",
+  "customer_address": null,
+  "currency": "USD",
+  "subtotal": 61.0,
+  "tax_amount": 6142.92,
+  "total_amount": 67572.13,
+  "payment_terms": null,
+  "line_items": [
+    {
+      "description": "Yilong 1'x1.5' 400Lines Area Rug High Density Hand knotted Silk Carpet 221H",
+      "quantity": 1.0,
+      "unit_price": 540.0,
+      "line_total": 594.0
+    },
+    {
+      "description": "YILONG 6'x9' Handmade Silk Area Rug Chinese Art Deco Classic Indoor Carpet",
+      "quantity": 5.0,
+      "unit_price": 12.0,
+      "line_total": 66.0
+    },
+    {
+      "description": "Faux Fur Animal Print Hide Skin Rug Cowhide Area Rug Floor Mat Carpet 33.5\"X43\"",
+      "quantity": 4.0,
+      "unit_price": 26.03,
+      "line_total": 114.53
+    },
+    {
+      "description": "Moroccan Amazigh Handmade Carpet 14'2\" x 7'5\"",
+      "quantity": 2.0,
+      "unit_price": 342.0,
+      "line_total": 752.4
+    },
+    {
+      "description": "2Pack Soft Fluffy Faux Fur Plain Chair Cover Washable Shaggy Area Rugs Carpet",
+      "quantity": 3.0,
+      "unit_price": 13.59,
+      "line_total": 44.85
+    },
+    {
+      "description": "Happy Christmas Home Decoration Rug Mat Carpet Bedroom Rugs Bedside Area Rug New",
+      "quantity": 1.0,
+      "unit_price": 60.32,
+      "line_total": 66.35
+    }
+  ],
+  "field_status_notes": {
+    "vendor_address": "not_applicable \u2014 source dataset combines name+address in one string, stored in vendor_name",
+    "customer_address": "not_applicable \u2014 same limitation as vendor_address",
+    "due_date": "not_applicable \u2014 not present in source annotations",
+    "po_number": "not_applicable \u2014 not present in source annotations",
+    "payment_terms": "not_applicable \u2014 not present in source annotations"
+  }
+}

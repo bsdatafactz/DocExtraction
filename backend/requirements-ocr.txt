@@ -1,0 +1,14 @@
+# Heavy binary deps for the scanned-document path — split out so the core
+# backend (requirements.txt) stays fast to install. Install with:
+#   pip install -r requirements.txt -r requirements-ocr.txt
+#
+# Pinned to versions actually verified against this codebase (2.x-era
+# pins didn't match what pip resolves for Python 3.12 — paddleocr 3.x is a
+# different, heavier API than 2.x). services/parsing.py runs with
+# enable_mkldnn=False — this CPU's oneDNN build hit an unimplemented
+# PIR-attribute conversion in PaddlePaddle's inference backend; plain CPU
+# kernels work but are noticeably slower (~50-60s/page in this environment).
+# If your deployment target has a working MKLDNN build, removing that flag
+# should speed OCR up substantially — worth testing there.
+paddlepaddle==3.3.1
+paddleocr==3.7.0

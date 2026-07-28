@@ -1,0 +1,51 @@
+{
+  "source_image": "digital_01.jpg",
+  "source_dataset": "mychen76/invoices-and-receipts_ocr_v1",
+  "invoice_number": "61356291",
+  "invoice_date": "09/06/2012",
+  "due_date": null,
+  "po_number": null,
+  "vendor_name": "Chapman, Kim and Green 64731 James Branch Smithmouth, NC 26872",
+  "vendor_address": null,
+  "vendor_tax_id": "949-84-9105",
+  "customer_name": "Rodriguez-Stevens 2280 Angela Plain Hortonshire, MS 93248",
+  "customer_address": null,
+  "currency": "USD",
+  "subtotal": 192.81,
+  "tax_amount": 19.28,
+  "total_amount": 212.09,
+  "payment_terms": null,
+  "line_items": [
+    {
+      "description": "Wine Glasses Goblets Pair Clear Glass",
+      "quantity": 5.0,
+      "unit_price": 12.0,
+      "line_total": 66.0
+    },
+    {
+      "description": "With Hooks Stemware Storage Multiple Uses Iron Wine Rack Hanging Glass",
+      "quantity": 4.0,
+      "unit_price": 28.08,
+      "line_total": 123.55
+    },
+    {
+      "description": "Replacement Corkscrew Parts Spiral Worm Wine Opener Bottle Houdini",
+      "quantity": 1.0,
+      "unit_price": 7.5,
+      "line_total": 8.25
+    },
+    {
+      "description": "HOME ESSENTIALS GRADIENT STEMLESS WINE GLASSES SET OF 420 FL OZ (591 ml) NEW",
+      "quantity": 1.0,
+      "unit_price": 12.99,
+      "line_total": 14.29
+    }
+  ],
+  "field_status_notes": {
+    "vendor_address": "not_applicable \u2014 source dataset combines name+address in one string, stored in vendor_name",
+    "customer_address": "not_applicable \u2014 same limitation as vendor_address",
+    "due_date": "not_applicable \u2014 not present in source annotations",
+    "po_number": "not_applicable \u2014 not present in source annotations",
+    "payment_terms": "not_applicable \u2014 not present in source annotations"
+  }
+}
