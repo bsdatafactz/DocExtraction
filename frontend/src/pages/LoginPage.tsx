@@ -27,7 +27,13 @@ export function LoginPage() {
   return (
     <div className="signin">
       <div className="signin-card">
-        <h1>Document Extraction</h1>
+        <img src="/brand/datafactz-logo.png" alt="DataFactZ" className="signin-logo signin-logo--light" />
+        <img
+          src="/brand/datafactz-logo-dark.png"
+          alt="DataFactZ"
+          className="signin-logo signin-logo--dark"
+        />
+        <p className="signin-tagline">Document Extraction</p>
         <p>Sign in to continue.</p>
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="error-banner">{error}</div>}

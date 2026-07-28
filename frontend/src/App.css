@@ -20,9 +20,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.9rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
+  padding: 0.7rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--brand-navy);
 }
 
 .top-nav-left {
@@ -32,15 +32,33 @@
 }
 
 .top-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   font-weight: 700;
-  font-size: 1.05rem;
-  color: var(--text);
+  font-size: 1rem;
+  color: #f5f6f7;
   text-decoration: none;
   letter-spacing: -0.01em;
 }
 
+.top-nav-logo {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+.top-nav-brand-sub {
+  display: block;
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: rgba(245, 246, 247, 0.55);
+  margin-top: 1px;
+}
+
 .nav-link {
-  color: var(--text-muted);
+  color: rgba(245, 246, 247, 0.6);
   text-decoration: none;
   font-size: 0.88rem;
   padding: 0.3rem 0.1rem;
@@ -48,7 +66,7 @@
 }
 
 .nav-link:hover {
-  color: var(--text);
+  color: #f5f6f7;
 }
 
 .nav-link--active {
@@ -61,6 +79,30 @@
   align-items: center;
   gap: 0.6rem;
   flex-shrink: 0;
+}
+
+.top-nav .role-badge {
+  color: rgba(245, 246, 247, 0.7);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.top-nav .signout-link {
+  color: rgba(245, 246, 247, 0.6);
+}
+
+.top-nav .signout-link:hover {
+  color: #f5f6f7;
+}
+
+.top-nav .theme-toggle {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(245, 246, 247, 0.75);
+}
+
+.top-nav .theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .theme-toggle {
@@ -837,9 +879,45 @@ input {
   text-align: center;
 }
 
-.signin-card h1 {
-  font-size: 1.6rem;
-  margin-bottom: 0.5rem;
+.signin-logo {
+  height: 40px;
+  width: auto;
+  margin-bottom: 0.6rem;
+}
+
+.signin-logo--dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .signin-logo--light {
+    display: none;
+  }
+  .signin-logo--dark {
+    display: inline-block;
+  }
+}
+
+:root[data-theme="dark"] .signin-logo--light {
+  display: none;
+}
+:root[data-theme="dark"] .signin-logo--dark {
+  display: inline-block;
+}
+:root[data-theme="light"] .signin-logo--light {
+  display: inline-block;
+}
+:root[data-theme="light"] .signin-logo--dark {
+  display: none;
+}
+
+.signin-tagline {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.9rem;
 }
 
 .signin-card > p {

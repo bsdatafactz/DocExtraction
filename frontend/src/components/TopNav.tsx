@@ -10,7 +10,10 @@ export function TopNav() {
     <nav className="top-nav">
       <div className="top-nav-left">
         <NavLink to="/" className="top-nav-brand">
-          Document Extraction
+          <img src="/brand/datafactz-mark.png" alt="" className="top-nav-logo" />
+          <span>
+            DataFactZ <span className="top-nav-brand-sub">Document Extraction</span>
+          </span>
         </NavLink>
         <NavLink to="/" end className={({ isActive }) => (isActive ? "nav-link nav-link--active" : "nav-link")}>
           Home
