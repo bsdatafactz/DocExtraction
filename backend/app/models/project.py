@@ -9,7 +9,7 @@ invoice pipeline against the wrong schema.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -22,6 +22,10 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(256))
     document_type: Mapped[str] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Nullable: projects created before ownership existed have no owner and
+    # are only visible to admins (see list/get scoping in api/v1/projects.py)
+    # rather than being backfilled onto an arbitrary user.
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     documents: Mapped[list["Document"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"

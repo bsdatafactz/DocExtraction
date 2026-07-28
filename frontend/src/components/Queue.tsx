@@ -10,7 +10,6 @@ interface Props {
   onDeleted: () => void;
   onError: (err: unknown) => void;
   loadingDocumentId: number | null;
-  isAdmin: boolean;
 }
 
 export function Queue({
@@ -19,7 +18,6 @@ export function Queue({
   onDeleted,
   onError,
   loadingDocumentId,
-  isAdmin,
 }: Props) {
   const [pendingDelete, setPendingDelete] = useState<DocumentSummary | null>(null);
 
@@ -70,11 +68,9 @@ export function Queue({
                       ? "Review"
                       : "View"}
                 </button>
-                {isAdmin && (
-                  <button className="btn-danger" onClick={() => setPendingDelete(doc)}>
-                    Delete
-                  </button>
-                )}
+                <button className="btn-danger" onClick={() => setPendingDelete(doc)}>
+                  Delete
+                </button>
               </td>
             </tr>
           ))}

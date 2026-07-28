@@ -9,16 +9,35 @@ import type {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+// Plain fetch() has no timeout — if the backend is slow (e.g. an OCR job
+// hogging the CPU), a request just hangs forever instead of failing, so the
+// page never gets a chance to show an error and just sits blank. Force a
+// bound so slow polls fail fast with a clear message instead.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 function authHeaders(): Record<string, string> {
   const token = getStoredToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${BASE_URL}/api/v1${path}`, {
-    ...init,
-    headers: { ...authHeaders(), ...init.headers },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/api/v1${path}`, {
+      ...init,
+      headers: { ...authHeaders(), ...init.headers },
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Request timed out — the server is taking longer than expected.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`${response.status} ${response.statusText}: ${body}`);

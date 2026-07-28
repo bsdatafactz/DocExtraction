@@ -37,6 +37,7 @@ class DocumentDetail(DocumentSummary):
     # after model_validate (Document has no document_type attribute of its
     # own to auto-populate from).
     document_type: str = ""
+    project_id: int
     extraction: InvoiceExtraction | ResumeExtraction | None = None
     confidence: DocumentConfidence | None = None
 

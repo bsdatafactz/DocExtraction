@@ -20,11 +20,10 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/docextraction
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
-      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-08-01-preview}
+      FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:-}
+      FOUNDRY_BASE_URL: ${FOUNDRY_BASE_URL:-https://ai-training-msftfoundry.services.ai.azure.com/openai/v1/}
+      DEEPSEEK_DEPLOYMENT: ${DEEPSEEK_DEPLOYMENT:-deepseek-v3.2}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-gpt-5}
     ports:
       - "8000:8000"
     volumes:

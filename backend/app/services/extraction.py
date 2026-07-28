@@ -14,7 +14,6 @@ from typing import TypeVar
 from openai import (
     APIConnectionError,
     APITimeoutError,
-    AzureOpenAI,
     InternalServerError,
     OpenAI,
     RateLimitError,
@@ -83,14 +82,21 @@ def _extract_with_repair(
             raise ExtractionError(f"Extraction failed validation twice: {exc2}") from exc2
 
 
+def _foundry_client() -> OpenAI:
+    # Both the first-pass and escalation models are deployments on the same
+    # Foundry resource's OpenAI-SDK-compatible v1 surface — one client
+    # shape, differing only in the `model=` deployment name per call.
+    return OpenAI(api_key=settings.foundry_api_key, base_url=settings.foundry_base_url)
+
+
 def extract_with_deepseek(document_text: str, schema_cls: type[T], prompt_intro: str) -> T:
-    client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+    client = _foundry_client()
     schema_json = json.dumps(schema_cls.model_json_schema())
 
     def call(prompt: str) -> str:
         return _complete_with_retry(
             client,
-            model="deepseek-chat",
+            model=settings.deepseek_deployment,
             messages=[
                 {"role": "system", "content": prompt_intro + schema_json},
                 {"role": "user", "content": prompt},
@@ -103,11 +109,7 @@ def extract_with_deepseek(document_text: str, schema_cls: type[T], prompt_intro:
 
 def extract_with_azure_openai(document_text: str, schema_cls: type[T], prompt_intro: str) -> T:
     """Escalation path for documents below the confidence threshold."""
-    client = AzureOpenAI(
-        api_key=settings.azure_openai_api_key,
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_version=settings.azure_openai_api_version,
-    )
+    client = _foundry_client()
     schema_json = json.dumps(schema_cls.model_json_schema())
 
     def call(prompt: str) -> str:

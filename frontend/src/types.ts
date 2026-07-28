@@ -109,6 +109,7 @@ export interface DocumentSummary {
 
 export interface DocumentDetail extends DocumentSummary {
   document_type: DocumentType;
+  project_id: number;
   extraction: Extraction | null;
   confidence: DocumentConfidence | null;
 }

@@ -47,10 +47,12 @@ export function HomePage() {
     <div>
       {stats && (
         <div className="stat-grid stat-grid--top">
-          <div className="stat-card">
-            <span className="stat-label">Total Users</span>
-            <span className="stat-value">{stats.total_users}</span>
-          </div>
+          {isAdmin && (
+            <div className="stat-card">
+              <span className="stat-label">Total Users</span>
+              <span className="stat-value">{stats.total_users}</span>
+            </div>
+          )}
           <div className="stat-card">
             <span className="stat-label">Total Projects</span>
             <span className="stat-value">{stats.total_projects}</span>
@@ -115,7 +117,6 @@ export function HomePage() {
           onSelect={(p) => navigate(`/projects/${p.id}/upload`)}
           onCreated={refresh}
           onError={(err) => setError(errorMessage(err))}
-          isAdmin={isAdmin}
         />
       )}
 

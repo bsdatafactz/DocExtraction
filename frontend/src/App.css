@@ -265,6 +265,62 @@ input {
   gap: 0.3rem;
 }
 
+.document-detail-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .document-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.document-sidebar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.6rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.document-sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.document-sidebar-item:hover {
+  background: var(--panel-raised);
+}
+
+.document-sidebar-item--active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.document-sidebar-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
 .review-screen {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);

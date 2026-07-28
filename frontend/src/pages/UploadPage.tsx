@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { listDocuments } from "../api";
-import { useAuth } from "../AuthContext";
 import { Queue } from "../components/Queue";
 import { UploadDropzone } from "../components/UploadDropzone";
 import type { DocumentSummary } from "../types";
@@ -15,16 +14,23 @@ function errorMessage(err: unknown): string {
 export function UploadPage() {
   const { projectId } = useParams();
   const id = Number(projectId);
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // A slow backend response shouldn't cause the next poll tick to pile a
+  // second request on top of one that's still in flight.
+  const inFlight = useRef(false);
 
   const refresh = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       setDocuments(await listDocuments(id));
+      setError(null);
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      inFlight.current = false;
     }
   }, [id]);
 
@@ -53,7 +59,6 @@ export function UploadPage() {
         onDeleted={refresh}
         onError={(err) => setError(errorMessage(err))}
         loadingDocumentId={null}
-        isAdmin={user?.role === "admin"}
       />
     </div>
   );

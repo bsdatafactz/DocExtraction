@@ -9,10 +9,9 @@ interface Props {
   onSelect: (project: Project) => void;
   onCreated: () => void;
   onError: (err: unknown) => void;
-  isAdmin: boolean;
 }
 
-export function ProjectList({ projects, onSelect, onCreated, onError, isAdmin }: Props) {
+export function ProjectList({ projects, onSelect, onCreated, onError }: Props) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [documentType, setDocumentType] = useState<DocumentType>("invoice");
@@ -66,19 +65,17 @@ export function ProjectList({ projects, onSelect, onCreated, onError, isAdmin }:
                 {DOCUMENT_TYPES.find((t) => t.value === project.document_type)?.label ??
                   project.document_type}
               </span>
-              {isAdmin && (
-                <button
-                  className="project-card-delete"
-                  disabled={deletingId === project.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPendingDelete(project);
-                  }}
-                  title="Delete project"
-                >
-                  {deletingId === project.id ? "…" : "×"}
-                </button>
-              )}
+              <button
+                className="project-card-delete"
+                disabled={deletingId === project.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPendingDelete(project);
+                }}
+                title="Delete project"
+              >
+                {deletingId === project.id ? "…" : "×"}
+              </button>
             </div>
             <h3>{project.name}</h3>
             <span className="project-card-meta">

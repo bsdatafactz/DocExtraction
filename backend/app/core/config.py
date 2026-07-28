@@ -6,16 +6,17 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/docextraction"
 
-    deepseek_api_key: str = ""
-    deepseek_base_url: str = "https://api.deepseek.com"
+    # Both the first-pass and escalation models are deployments on the same
+    # Azure AI Foundry resource, reachable through its OpenAI-SDK-compatible
+    # v1 surface (base_url + model=<deployment name>, no per-call
+    # api-version, no separate AzureOpenAI client) — one key covers every
+    # deployment on the resource.
+    foundry_api_key: str = ""
+    foundry_base_url: str = "https://ai-training-msftfoundry.services.ai.azure.com/openai/v1/"
+    deepseek_deployment: str = "deepseek-v3.2"
 
-    # Escalation model — Azure AI Foundry-hosted OpenAI deployment, not a
-    # raw model name. Set these from the Foundry deployment's "Endpoint"
-    # and "Deployment name" fields.
-    azure_openai_api_key: str = ""
-    azure_openai_endpoint: str = ""
-    azure_openai_deployment: str = ""
-    azure_openai_api_version: str = "2024-08-01-preview"
+    # Escalation model — a second deployment on the same Foundry resource.
+    azure_openai_deployment: str = "gpt-5"
 
     # Aggregate confidence below this triggers escalation to the stronger model.
     confidence_escalation_threshold: float = 0.75

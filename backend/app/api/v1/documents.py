@@ -38,11 +38,16 @@ project_documents_router = APIRouter(prefix="/projects/{project_id}/documents", 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-def _get_project_or_404(project_id: int, db: Session) -> Project:
+def _get_project_or_404(project_id: int, db: Session, user: User) -> Project:
     project = db.get(Project, project_id)
-    if project is None:
+    if project is None or (user.role != "admin" and project.owner_id != user.id):
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+
+
+def _check_document_access(document: Document, user: User) -> None:
+    if user.role != "admin" and document.project.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Document not found")
 
 
 @project_documents_router.post("", response_model=UploadResponse)
@@ -51,9 +56,9 @@ def upload_document(
     file: UploadFile,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> UploadResponse:
-    project = _get_project_or_404(project_id, db)
+    project = _get_project_or_404(project_id, db, user)
     if project.document_type not in IMPLEMENTED_DOCUMENT_TYPES:
         raise HTTPException(
             status_code=400,
@@ -88,9 +93,9 @@ def list_documents(
     limit: int = 50,
     offset: int = 0,
     db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> list[DocumentSummary]:
-    _get_project_or_404(project_id, db)
+    _get_project_or_404(project_id, db, user)
     query = db.query(Document).filter(Document.project_id == project_id)
     if status is not None:
         query = query.filter(Document.status == status.value)
@@ -108,11 +113,12 @@ def list_documents(
 
 @router.get("/{document_id}", response_model=DocumentDetail)
 def get_document(
-    document_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    document_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> DocumentDetail:
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
+    _check_document_access(document, user)
 
     extraction = _latest_extraction(document)
     confidence = _document_confidence(document)
@@ -135,13 +141,18 @@ def get_document_file(
     if token is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        decode_access_token(token)
+        payload = decode_access_token(token)
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
+
+    user = db.get(User, int(payload["sub"]))
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
 
     document = db.get(Document, document_id)
     if document is None or not os.path.exists(document.file_path):
         raise HTTPException(status_code=404, detail="Document file not found")
+    _check_document_access(document, user)
     return FileResponse(
         document.file_path, filename=document.filename, content_disposition_type="inline"
     )
@@ -149,11 +160,12 @@ def get_document_file(
 
 @router.delete("/{document_id}", status_code=204)
 def delete_document(
-    document_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+    document_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
+    _check_document_access(document, user)
 
     if os.path.exists(document.file_path):
         os.remove(document.file_path)
