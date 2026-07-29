@@ -190,7 +190,6 @@ export function ReviewScreen({ document, onDone, onError, isAdmin }: Props) {
   return (
     <div className="review-screen">
       <div className="review-panel review-original">
-        <h3>Original document</h3>
         <DocumentViewer fileUrl={documentFileUrl(document.id)} filename={document.filename} />
       </div>
 
