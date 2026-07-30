@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import require_admin
 from app.db.session import get_db
+from app.models.project import Project
 from app.models.user import User
 from app.schemas.auth import RoleUpdateRequest, UserSummary
 
@@ -48,5 +49,10 @@ def delete_user(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Orphan rather than cascade-delete their projects — same "no owner ==
+    # admin-only visibility" state Project already supports for projects
+    # created before ownership existed (see app/models/project.py). Deleting
+    # a user should never silently destroy their documents/extractions.
+    db.query(Project).filter(Project.owner_id == user_id).update({"owner_id": None})
     db.delete(user)
     db.commit()
