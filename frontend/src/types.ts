@@ -35,17 +35,11 @@ export interface InvoiceExtraction extends ExtractionMeta {
   invoice_number: string | null;
   invoice_date: string | null;
   due_date: string | null;
-  po_number: string | null;
   vendor_name: string | null;
-  vendor_address: string | null;
-  vendor_tax_id: string | null;
   customer_name: string | null;
-  customer_address: string | null;
-  currency: string | null;
   subtotal: number | null;
   tax_amount: number | null;
   total_amount: number | null;
-  payment_terms: string | null;
   line_items: LineItem[];
 }
 

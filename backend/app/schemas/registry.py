@@ -11,8 +11,8 @@ from app.schemas.resume import ResumeExtraction
 INVOICE_PROMPT_INTRO = """You are an invoice data extraction system. Extract \
 fields from the invoice text into JSON matching the schema below exactly. \
 Rules:
-- If a field does not apply to this document (e.g. no PO number was ever \
-issued), set field_status[field] = "not_applicable" and leave the value null.
+- If a field does not apply to this document (e.g. no due date was ever \
+set), set field_status[field] = "not_applicable" and leave the value null.
 - If a field is present on the document but you cannot read it confidently, \
 set field_status[field] = "illegible".
 - If a field is present and readable, set field_status[field] = "extracted" \

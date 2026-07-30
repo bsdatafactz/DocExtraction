@@ -24,15 +24,9 @@ class InvoiceExtraction(ExtractionMeta):
     invoice_number: str | None = None
     invoice_date: date | None = None
     due_date: date | None = None
-    po_number: str | None = None
     vendor_name: str | None = None
-    vendor_address: str | None = None
-    vendor_tax_id: str | None = None
     customer_name: str | None = None
-    customer_address: str | None = None
-    currency: str | None = None
     subtotal: float | None = None
     tax_amount: float | None = None
     total_amount: float | None = None
-    payment_terms: str | None = None
     line_items: list[LineItem] = Field(default_factory=list)

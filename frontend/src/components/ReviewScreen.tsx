@@ -23,14 +23,14 @@ const SECTIONS_BY_TYPE: Record<string, Section[]> = {
     {
       kind: "fields",
       title: "Overview",
-      fields: ["invoice_number", "invoice_date", "due_date", "po_number", "payment_terms"],
+      fields: ["invoice_number", "invoice_date", "due_date"],
     },
     {
       kind: "fields",
       title: "Parties",
-      fields: ["vendor_name", "vendor_address", "vendor_tax_id", "customer_name", "customer_address"],
+      fields: ["vendor_name", "customer_name"],
     },
-    { kind: "fields", title: "Amounts", fields: ["currency", "subtotal", "tax_amount", "total_amount"] },
+    { kind: "fields", title: "Amounts", fields: ["subtotal", "tax_amount", "total_amount"] },
     {
       kind: "table",
       title: "Line Items",
