@@ -8,6 +8,7 @@ handle both the clean digital invoices and the skewed scans in the test set.
 
 import os
 import tempfile
+from concurrent.futures import ProcessPoolExecutor
 
 import fitz
 from pydantic import BaseModel
@@ -22,6 +23,15 @@ DIGITAL_TEXT_MIN_CHARS = 20
 _OCR_RENDER_DPI = 200
 
 _ocr_engine = None
+
+# run_pipeline (and therefore parse_document) already runs off the main
+# thread via FastAPI's BackgroundTasks, but that's still the same process —
+# PaddleOCR.predict() pins the CPU for the full inference, which starves
+# every other request the API is serving for as long as it runs. A separate
+# worker process keeps OCR's CPU load from ever touching the process that
+# serves the rest of the site. One worker matches "load the model once, not
+# per document" — OCR calls already queue behind each other on one CPU core.
+_ocr_executor: ProcessPoolExecutor | None = None
 
 
 class ParsedPage(BaseModel):
@@ -82,16 +92,17 @@ def _get_ocr_engine():
     return _ocr_engine
 
 
-def _run_ocr(page: "fitz.Page") -> tuple[str, float]:
-    pix = page.get_pixmap(dpi=_OCR_RENDER_DPI)
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-        pix.save(tmp.name)
-        tmp_path = tmp.name
+def _get_ocr_executor() -> ProcessPoolExecutor:
+    global _ocr_executor
+    if _ocr_executor is None:
+        _ocr_executor = ProcessPoolExecutor(max_workers=1)
+    return _ocr_executor
 
-    try:
-        result = _get_ocr_engine().predict(tmp_path)
-    finally:
-        os.remove(tmp_path)
+
+def _ocr_image_file(image_path: str) -> tuple[str, float]:
+    # Runs inside the OCR worker process — must stay a module-level function
+    # so ProcessPoolExecutor can pickle a reference to it.
+    result = _get_ocr_engine().predict(image_path)
 
     if not result:
         return "", 0.0
@@ -102,3 +113,15 @@ def _run_ocr(page: "fitz.Page") -> tuple[str, float]:
     text = "\n".join(texts)
     confidence = sum(scores) / len(scores) if scores else 0.0
     return text, confidence
+
+
+def _run_ocr(page: "fitz.Page") -> tuple[str, float]:
+    pix = page.get_pixmap(dpi=_OCR_RENDER_DPI)
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        pix.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        return _get_ocr_executor().submit(_ocr_image_file, tmp_path).result()
+    finally:
+        os.remove(tmp_path)

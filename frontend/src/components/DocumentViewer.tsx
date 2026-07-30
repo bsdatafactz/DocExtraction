@@ -1,3 +1,4 @@
+import { ImageViewer } from "./ImageViewer";
 import { PdfViewer } from "./PdfViewer";
 
 interface Props {
@@ -5,7 +6,10 @@ interface Props {
   filename: string;
 }
 
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
+// TIFF is deliberately excluded — browsers can't decode it in an <img>, so
+// it's better routed to the "no preview" fallback than shown as a silently
+// broken image.
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"];
 
 export function DocumentViewer({ fileUrl, filename }: Props) {
   const lower = filename.toLowerCase();
@@ -15,7 +19,7 @@ export function DocumentViewer({ fileUrl, filename }: Props) {
   }
 
   if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
-    return <img className="image-viewer" src={fileUrl} alt={filename} />;
+    return <ImageViewer fileUrl={fileUrl} filename={filename} />;
   }
 
   return (

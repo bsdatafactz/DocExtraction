@@ -45,6 +45,8 @@ export function HomePage() {
 
   return (
     <div>
+      {stats == null && error == null && <p className="page-subtitle">Loading…</p>}
+
       {stats && (
         <div className="stat-grid stat-grid--top">
           {isAdmin && (
