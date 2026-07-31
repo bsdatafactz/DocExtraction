@@ -140,7 +140,10 @@ def score_document(
         document_id=document_id,
         fields=fields,
         aggregate=aggregate,
-        needs_review=aggregate < settings.confidence_review_threshold,
+        # Every document requires a human review step — confidence informs
+        # escalation (see needs_escalation) and which fields get flagged for
+        # extra scrutiny during review, but never skips review outright.
+        needs_review=True,
     )
 
 

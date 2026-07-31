@@ -62,6 +62,11 @@ class Extraction(Base):
     raw_json: Mapped[dict] = mapped_column(JSON)
     is_escalation: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Nullable: rows written before token capture existed have no usage data
+    # and are excluded from cost totals rather than costed as zero-token
+    # calls (see services/cost.py).
+    prompt_tokens: Mapped[int | None] = mapped_column(nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(nullable=True)
 
     document: Mapped["Document"] = relationship(back_populates="extractions")
 

@@ -49,7 +49,7 @@ class UploadResponse(BaseModel):
 
 
 class CorrectionRequest(BaseModel):
-    corrected_fields: dict[str, str | float | None | list[dict]]
+    corrected_fields: dict[str, str | float | None | list[str] | list[dict]]
     # False = "flag for follow-up": persist the edits but leave the document
     # in needs_review rather than marking it approved.
     approve: bool = True

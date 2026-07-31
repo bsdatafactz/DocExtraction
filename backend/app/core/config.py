@@ -18,11 +18,20 @@ class Settings(BaseSettings):
     # Escalation model — a second deployment on the same Foundry resource.
     azure_openai_deployment: str = "gpt-5"
 
+    # $ per 1,000,000 tokens, used by services/cost.py to turn the token
+    # counts captured off each API response into a dollar figure. Defaults
+    # are Azure AI Foundry's published list pricing for deepseek-v3.2 and
+    # gpt-5 (looked up 2026-07-30) — override here or in .env if this
+    # account's contracted rate differs.
+    deepseek_input_price_per_1m: float = 0.58
+    deepseek_output_price_per_1m: float = 1.68
+    azure_openai_input_price_per_1m: float = 1.25
+    azure_openai_output_price_per_1m: float = 10.00
+
     # Aggregate confidence below this triggers escalation to the stronger model.
+    # There is no confidence-based auto-approval — every document requires a
+    # human review step regardless of score.
     confidence_escalation_threshold: float = 0.75
-    # Aggregate confidence below this (post-escalation) routes to human
-    # review; at or above it, a document auto-approves with no human step.
-    confidence_review_threshold: float = 0.9
 
     upload_dir: str = "./uploads"
 

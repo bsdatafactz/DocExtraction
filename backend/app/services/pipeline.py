@@ -42,12 +42,16 @@ def run_pipeline(document_id: int) -> None:
         document.status = DocumentStatus.EXTRACTING.value
         document.extraction_started_at = datetime.utcnow()
         db.commit()
-        result = extraction_service.extract_with_deepseek(parsed.full_text, schema_cls, prompt_intro)
+        result, prompt_tokens, completion_tokens = extraction_service.extract_with_deepseek(
+            parsed.full_text, schema_cls, prompt_intro
+        )
         db.add(
             Extraction(
                 document_id=document.id,
                 model_name="deepseek-chat",
                 raw_json=result.model_dump(mode="json"),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
             )
         )
 
@@ -56,8 +60,10 @@ def run_pipeline(document_id: int) -> None:
         if confidence_service.needs_escalation(conf):
             document.status = DocumentStatus.ESCALATED.value
             db.commit()
-            escalated_result = extraction_service.extract_with_azure_openai(
-                parsed.full_text, schema_cls, prompt_intro
+            escalated_result, esc_prompt_tokens, esc_completion_tokens = (
+                extraction_service.extract_with_azure_openai(
+                    parsed.full_text, schema_cls, prompt_intro
+                )
             )
             db.add(
                 Extraction(
@@ -65,6 +71,8 @@ def run_pipeline(document_id: int) -> None:
                     model_name=f"azure-openai:{settings.azure_openai_deployment}",
                     raw_json=escalated_result.model_dump(mode="json"),
                     is_escalation=True,
+                    prompt_tokens=esc_prompt_tokens,
+                    completion_tokens=esc_completion_tokens,
                 )
             )
             conf = confidence_service.score_document(
@@ -89,9 +97,9 @@ def run_pipeline(document_id: int) -> None:
             )
 
         document.extraction_completed_at = datetime.utcnow()
-        document.status = (
-            DocumentStatus.NEEDS_REVIEW.value if conf.needs_review else DocumentStatus.APPROVED.value
-        )
+        # No confidence-based auto-approval — every document lands here for
+        # a human to review, regardless of how confident the extraction was.
+        document.status = DocumentStatus.NEEDS_REVIEW.value
         db.commit()
 
     except Exception:

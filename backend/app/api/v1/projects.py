@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
+from app.core.ownership import can_access_project, owned_projects_query
 from app.db.session import get_db
 from app.models.project import Project
 from app.models.user import User
@@ -37,10 +38,7 @@ def create_project(
 def list_projects(
     db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> list[ProjectSummary]:
-    query = db.query(Project)
-    if user.role != "admin":
-        query = query.filter(Project.owner_id == user.id)
-    projects = query.order_by(Project.created_at.desc()).all()
+    projects = owned_projects_query(db, user).order_by(Project.created_at.desc()).all()
     return [_to_summary(p) for p in projects]
 
 
@@ -49,7 +47,7 @@ def get_project(
     project_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> ProjectSummary:
     project = db.get(Project, project_id)
-    if project is None or (user.role != "admin" and project.owner_id != user.id):
+    if project is None or not can_access_project(project, user):
         raise HTTPException(status_code=404, detail="Project not found")
     return _to_summary(project)
 
@@ -59,7 +57,7 @@ def delete_project(
     project_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     project = db.get(Project, project_id)
-    if project is None or (user.role != "admin" and project.owner_id != user.id):
+    if project is None or not can_access_project(project, user):
         raise HTTPException(status_code=404, detail="Project not found")
 
     for document in project.documents:

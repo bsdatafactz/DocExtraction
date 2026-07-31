@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -49,10 +51,17 @@ def delete_user(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Orphan rather than cascade-delete their projects — same "no owner ==
-    # admin-only visibility" state Project already supports for projects
-    # created before ownership existed (see app/models/project.py). Deleting
-    # a user should never silently destroy their documents/extractions.
-    db.query(Project).filter(Project.owner_id == user_id).update({"owner_id": None})
+    for project in db.query(Project).filter(Project.owner_id == user_id):
+        for document in project.documents:
+            if os.path.exists(document.file_path):
+                os.remove(document.file_path)
+        db.delete(project)
+
+    # No relationship() links User <-> Project (owner_id is a plain FK
+    # column), so the ORM has no dependency info to order these deletes —
+    # flush the project deletes before deleting the user, or the FK
+    # constraint can fire depending on flush ordering.
+    db.flush()
+
     db.delete(user)
     db.commit()

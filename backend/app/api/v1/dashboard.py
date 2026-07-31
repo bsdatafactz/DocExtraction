@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Query, Session
 
 from app.core.deps import get_current_user
+from app.core.ownership import can_access_project
 from app.db.session import get_db
 from app.models.document import Correction, Document, Extraction
 from app.models.project import Project
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 _TREND_DAYS = 30
 
 
-def _scoped_documents(db: Session, user: User) -> Query:
+def _scoped_documents(db: Session, user: User, project_id: int | None = None) -> Query:
     # Admins see every user's documents; everyone else only sees documents
     # in projects they own — same rule as the projects/documents list
     # endpoints, so the dashboard never shows a regular user numbers that
@@ -26,13 +27,17 @@ def _scoped_documents(db: Session, user: User) -> Query:
         query = query.join(Project, Document.project_id == Project.id).filter(
             Project.owner_id == user.id
         )
+    if project_id is not None:
+        query = query.filter(Document.project_id == project_id)
     return query
 
 
-def _avg_seconds(db: Session, user: User, start_col, end_col) -> float | None:
+def _avg_seconds(
+    db: Session, user: User, start_col, end_col, project_id: int | None = None
+) -> float | None:
     seconds_expr = func.extract("epoch", end_col - start_col)
     result = (
-        _scoped_documents(db, user)
+        _scoped_documents(db, user, project_id)
         .filter(start_col.isnot(None), end_col.isnot(None))
         .with_entities(func.avg(seconds_expr))
         .scalar()
@@ -40,11 +45,11 @@ def _avg_seconds(db: Session, user: User, start_col, end_col) -> float | None:
     return round(float(result), 2) if result is not None else None
 
 
-def _daily_uploads(db: Session, user: User) -> list[DailyCount]:
+def _daily_uploads(db: Session, user: User, project_id: int | None = None) -> list[DailyCount]:
     since = datetime.utcnow() - timedelta(days=_TREND_DAYS - 1)
     day = func.date(Document.created_at)
     rows = (
-        _scoped_documents(db, user)
+        _scoped_documents(db, user, project_id)
         .filter(Document.created_at >= since)
         .with_entities(day.label("day"), func.count(Document.id))
         .group_by(day)
@@ -61,9 +66,16 @@ def _daily_uploads(db: Session, user: User) -> list[DailyCount]:
 
 @router.get("", response_model=DashboardStats)
 def get_dashboard(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    project_id: int | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> DashboardStats:
     is_admin = user.role == "admin"
+
+    if project_id is not None:
+        project = db.get(Project, project_id)
+        if project is None or not can_access_project(project, user):
+            raise HTTPException(status_code=404, detail="Project not found")
 
     total_users = (db.query(func.count(User.id)).scalar() or 0) if is_admin else 0
 
@@ -72,10 +84,10 @@ def get_dashboard(
         project_query = project_query.filter(Project.owner_id == user.id)
     total_projects = project_query.count()
 
-    total_documents = _scoped_documents(db, user).count()
+    total_documents = _scoped_documents(db, user, project_id).count()
 
     status_rows = (
-        _scoped_documents(db, user)
+        _scoped_documents(db, user, project_id)
         .with_entities(Document.status, func.count(Document.id))
         .group_by(Document.status)
         .all()
@@ -83,7 +95,9 @@ def get_dashboard(
     status_counts = {status: count for status, count in status_rows}
 
     error_count = status_counts.get("failed", 0)
-    scanned_count = _scoped_documents(db, user).filter(Document.is_scanned.is_(True)).count()
+    scanned_count = (
+        _scoped_documents(db, user, project_id).filter(Document.is_scanned.is_(True)).count()
+    )
 
     escalation_query = db.query(func.count(func.distinct(Extraction.document_id))).join(
         Document, Extraction.document_id == Document.id
@@ -92,6 +106,8 @@ def get_dashboard(
         escalation_query = escalation_query.join(
             Project, Document.project_id == Project.id
         ).filter(Project.owner_id == user.id)
+    if project_id is not None:
+        escalation_query = escalation_query.filter(Document.project_id == project_id)
     escalation_count = escalation_query.filter(Extraction.is_escalation.is_(True)).scalar() or 0
 
     reviewed_query = db.query(func.count(func.distinct(Correction.document_id))).join(
@@ -101,10 +117,12 @@ def get_dashboard(
         reviewed_query = reviewed_query.join(
             Project, Document.project_id == Project.id
         ).filter(Project.owner_id == user.id)
+    if project_id is not None:
+        reviewed_query = reviewed_query.filter(Document.project_id == project_id)
     reviewed_count = reviewed_query.scalar() or 0
 
     auto_approved_count = (
-        _scoped_documents(db, user)
+        _scoped_documents(db, user, project_id)
         .filter(Document.status == "approved")
         .filter(~Document.id.in_(db.query(Correction.document_id).distinct()))
         .count()
@@ -116,13 +134,13 @@ def get_dashboard(
         total_documents=total_documents,
         status_counts=status_counts,
         avg_parsing_seconds=_avg_seconds(
-            db, user, Document.parsing_started_at, Document.parsing_completed_at
+            db, user, Document.parsing_started_at, Document.parsing_completed_at, project_id
         ),
         avg_extraction_seconds=_avg_seconds(
-            db, user, Document.extraction_started_at, Document.extraction_completed_at
+            db, user, Document.extraction_started_at, Document.extraction_completed_at, project_id
         ),
         avg_processing_seconds=_avg_seconds(
-            db, user, Document.parsing_started_at, Document.extraction_completed_at
+            db, user, Document.parsing_started_at, Document.extraction_completed_at, project_id
         ),
         scanned_count=scanned_count,
         error_count=error_count,
@@ -131,5 +149,5 @@ def get_dashboard(
         escalation_rate=round(escalation_count / total_documents, 3) if total_documents else 0.0,
         auto_approved_count=auto_approved_count,
         reviewed_count=reviewed_count,
-        daily_uploads=_daily_uploads(db, user),
+        daily_uploads=_daily_uploads(db, user, project_id),
     )

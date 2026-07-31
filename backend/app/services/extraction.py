@@ -34,11 +34,15 @@ _MAX_ATTEMPTS = 3
 _BASE_DELAY_SECONDS = 1.0
 
 
-def _complete_with_retry(client, **kwargs) -> str:
+def _complete_with_retry(client, **kwargs) -> tuple[str, int, int]:
     for attempt in range(_MAX_ATTEMPTS):
         try:
             response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content or ""
+            content = response.choices[0].message.content or ""
+            usage = response.usage
+            prompt_tokens = usage.prompt_tokens if usage else 0
+            completion_tokens = usage.completion_tokens if usage else 0
+            return content, prompt_tokens, completion_tokens
         except _TRANSIENT_ERRORS as exc:
             if attempt == _MAX_ATTEMPTS - 1:
                 raise
@@ -64,20 +68,24 @@ def _parse_and_validate(raw_text: str, schema_cls: type[T]) -> T:
 
 
 def _extract_with_repair(
-    call: Callable[[str], str], document_text: str, schema_cls: type[T]
-) -> T:
+    call: Callable[[str], tuple[str, int, int]], document_text: str, schema_cls: type[T]
+) -> tuple[T, int, int]:
     prompt = f"Extract the fields from this document text:\n\n{document_text}"
-    raw = call(prompt)
+    raw, prompt_tokens, completion_tokens = call(prompt)
     try:
-        return _parse_and_validate(raw, schema_cls)
+        return _parse_and_validate(raw, schema_cls), prompt_tokens, completion_tokens
     except (json.JSONDecodeError, ValidationError) as exc:
         repair_prompt = (
             f"{prompt}\n\nYour previous response failed schema validation with "
             f"this error: {exc}\nReturn corrected JSON only, no other text."
         )
-        raw = call(repair_prompt)
+        raw, repair_prompt_tokens, repair_completion_tokens = call(repair_prompt)
         try:
-            return _parse_and_validate(raw, schema_cls)
+            return (
+                _parse_and_validate(raw, schema_cls),
+                prompt_tokens + repair_prompt_tokens,
+                completion_tokens + repair_completion_tokens,
+            )
         except (json.JSONDecodeError, ValidationError) as exc2:
             raise ExtractionError(f"Extraction failed validation twice: {exc2}") from exc2
 
@@ -89,11 +97,13 @@ def _foundry_client() -> OpenAI:
     return OpenAI(api_key=settings.foundry_api_key, base_url=settings.foundry_base_url)
 
 
-def extract_with_deepseek(document_text: str, schema_cls: type[T], prompt_intro: str) -> T:
+def extract_with_deepseek(
+    document_text: str, schema_cls: type[T], prompt_intro: str
+) -> tuple[T, int, int]:
     client = _foundry_client()
     schema_json = json.dumps(schema_cls.model_json_schema())
 
-    def call(prompt: str) -> str:
+    def call(prompt: str) -> tuple[str, int, int]:
         return _complete_with_retry(
             client,
             model=settings.deepseek_deployment,
@@ -107,12 +117,14 @@ def extract_with_deepseek(document_text: str, schema_cls: type[T], prompt_intro:
     return _extract_with_repair(call, document_text, schema_cls)
 
 
-def extract_with_azure_openai(document_text: str, schema_cls: type[T], prompt_intro: str) -> T:
+def extract_with_azure_openai(
+    document_text: str, schema_cls: type[T], prompt_intro: str
+) -> tuple[T, int, int]:
     """Escalation path for documents below the confidence threshold."""
     client = _foundry_client()
     schema_json = json.dumps(schema_cls.model_json_schema())
 
-    def call(prompt: str) -> str:
+    def call(prompt: str) -> tuple[str, int, int]:
         return _complete_with_retry(
             client,
             model=settings.azure_openai_deployment,

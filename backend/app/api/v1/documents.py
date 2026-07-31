@@ -1,13 +1,16 @@
+import csv
+import io
 import json
 import os
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user, require_admin
+from app.core.deps import get_current_user
+from app.core.ownership import can_access_project
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.document import Correction, Document
@@ -40,13 +43,13 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 
 def _get_project_or_404(project_id: int, db: Session, user: User) -> Project:
     project = db.get(Project, project_id)
-    if project is None or (user.role != "admin" and project.owner_id != user.id):
+    if project is None or not can_access_project(project, user):
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
 
 def _check_document_access(document: Document, user: User) -> None:
-    if user.role != "admin" and document.project.owner_id != user.id:
+    if not can_access_project(document.project, user):
         raise HTTPException(status_code=404, detail="Document not found")
 
 
@@ -111,6 +114,35 @@ def list_documents(
     return summaries
 
 
+@project_documents_router.get("/export")
+def export_project_documents(
+    project_id: int,
+    format: str = "json",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    project = _get_project_or_404(project_id, db, user)
+    documents = (
+        db.query(Document)
+        .filter(Document.project_id == project_id)
+        .order_by(Document.created_at)
+        .all()
+    )
+    rows = [
+        {
+            "document_id": document.id,
+            "filename": document.filename,
+            "status": document.status,
+            **_current_field_values(document),
+        }
+        for document in documents
+    ]
+
+    if format == "csv":
+        return _csv_response(rows, f"{project.name}_export.csv")
+    return _json_response(rows, f"{project.name}_export.json")
+
+
 @router.get("/{document_id}", response_model=DocumentDetail)
 def get_document(
     document_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
@@ -129,6 +161,26 @@ def get_document(
     detail.extraction = extraction
     detail.confidence = confidence
     return detail
+
+
+@router.get("/{document_id}/export")
+def export_document(
+    document_id: int,
+    format: str = "json",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    _check_document_access(document, user)
+
+    values = _current_field_values(document)
+    stem = os.path.splitext(document.filename)[0]
+
+    if format == "csv":
+        return _csv_response([values], f"{stem}.csv")
+    return _json_response(values, f"{stem}.json")
 
 
 @router.get("/{document_id}/file")
@@ -179,11 +231,12 @@ def submit_corrections(
     document_id: int,
     request: CorrectionRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
 ) -> DocumentDetail:
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
+    _check_document_access(document, user)
 
     for field_name, value in request.corrected_fields.items():
         if isinstance(value, list):
@@ -197,7 +250,7 @@ def submit_corrections(
                 document_id=document.id,
                 field_name=field_name,
                 corrected_value=corrected_value,
-                reviewer=admin.email,
+                reviewer=user.email,
             )
         )
 
@@ -205,7 +258,7 @@ def submit_corrections(
         document.status = DocumentStatus.APPROVED.value
     db.commit()
 
-    return get_document(document_id, db, admin)
+    return get_document(document_id, db, user)
 
 
 def _latest_extraction(document: Document) -> InvoiceExtraction | ResumeExtraction | None:
@@ -214,6 +267,62 @@ def _latest_extraction(document: Document) -> InvoiceExtraction | ResumeExtracti
     latest = max(document.extractions, key=lambda e: e.created_at)
     schema_cls, _ = get_extraction_schema(document.project.document_type)
     return schema_cls.model_validate(latest.raw_json)
+
+
+def _current_field_values(document: Document) -> dict[str, object]:
+    """The post-review record for export: the raw extraction with each
+    field's most recent human correction (if any) layered on top — export
+    should reflect what a reviewer approved, not the un-reviewed model
+    output."""
+    extraction = _latest_extraction(document)
+    values: dict[str, object] = extraction.model_dump(mode="json") if extraction else {}
+
+    latest_by_field: dict[str, Correction] = {}
+    for correction in document.corrections:
+        existing = latest_by_field.get(correction.field_name)
+        if existing is None or correction.created_at > existing.created_at:
+            latest_by_field[correction.field_name] = correction
+
+    for field_name, correction in latest_by_field.items():
+        raw = correction.corrected_value
+        if raw is None:
+            values[field_name] = None
+            continue
+        try:
+            values[field_name] = json.loads(raw)
+        except json.JSONDecodeError:
+            values[field_name] = raw
+    return values
+
+
+def _csv_response(rows: list[dict[str, object]], filename: str) -> Response:
+    fieldnames: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in fieldnames:
+                fieldnames.append(key)
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {k: json.dumps(v) if isinstance(v, (list, dict)) else v for k, v in row.items()}
+        )
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _json_response(data: object, filename: str) -> Response:
+    return Response(
+        content=json.dumps(data, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _document_confidence(document: Document) -> DocumentConfidence | None:
