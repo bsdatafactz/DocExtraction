@@ -1,5 +1,4 @@
 import type { DocumentSummary } from "../types";
-import { StatusBadge } from "./StatusBadge";
 
 interface Props {
   documents: DocumentSummary[];
@@ -19,7 +18,6 @@ export function DocumentSidebar({ documents, activeId, onSelect }: Props) {
           <span className="document-sidebar-filename" title={doc.filename}>
             {doc.filename}
           </span>
-          <StatusBadge status={doc.status} />
         </button>
       ))}
       {documents.length === 0 && <p className="page-subtitle">No documents in this project.</p>}

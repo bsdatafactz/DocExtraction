@@ -1,5 +1,6 @@
 import { getStoredToken } from "./auth";
 import type {
+  CostSummary,
   DashboardStats,
   DocumentDetail,
   DocumentSummary,
@@ -115,6 +116,40 @@ export function deleteDocument(id: number): Promise<void> {
   return request(`/documents/${id}`, { method: "DELETE" });
 }
 
+// A plain <a href> can't attach an Authorization header, so exports are
+// fetched with auth then handed to the browser as a Blob download instead.
+async function downloadExport(path: string, fallbackFilename: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}/api/v1${path}`, { headers: authHeaders() });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}: ${await response.text()}`);
+  }
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : fallbackFilename;
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function exportDocument(id: number, format: "json" | "csv"): Promise<void> {
+  return downloadExport(`/documents/${id}/export?format=${format}`, `document-${id}.${format}`);
+}
+
+export function exportProjectDocuments(
+  projectId: number,
+  format: "json" | "csv",
+): Promise<void> {
+  return downloadExport(
+    `/projects/${projectId}/documents/export?format=${format}`,
+    `project-${projectId}.${format}`,
+  );
+}
+
 export function submitCorrections(
   id: number,
   correctedFields: Record<string, string | number | null | Record<string, unknown>[]>,
@@ -129,8 +164,15 @@ export function submitCorrections(
 
 // ---- Dashboard ----
 
-export function getDashboard(): Promise<DashboardStats> {
-  return request("/dashboard");
+export function getDashboard(projectId?: number): Promise<DashboardStats> {
+  const query = projectId != null ? `?project_id=${projectId}` : "";
+  return request(`/dashboard${query}`);
+}
+
+// ---- Cost ----
+
+export function getCostSummary(): Promise<CostSummary> {
+  return request("/cost");
 }
 
 // ---- Users (admin only) ----

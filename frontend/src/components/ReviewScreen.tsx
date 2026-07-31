@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { documentFileUrl, submitCorrections } from "../api";
+import { documentFileUrl, exportDocument, submitCorrections } from "../api";
 import type { DocumentDetail } from "../types";
 import { DocumentViewer } from "./DocumentViewer";
 import { StatusBadge } from "./StatusBadge";
@@ -89,10 +89,9 @@ interface Props {
   document: DocumentDetail;
   onDone: () => void;
   onError: (err: unknown) => void;
-  isAdmin: boolean;
 }
 
-export function ReviewScreen({ document, onDone, onError, isAdmin }: Props) {
+export function ReviewScreen({ document, onDone, onError }: Props) {
   const sections = SECTIONS_BY_TYPE[document.document_type] ?? [];
   const extraction = (document.extraction ?? {}) as Record<string, unknown>;
 
@@ -132,6 +131,18 @@ export function ReviewScreen({ document, onDone, onError, isAdmin }: Props) {
     return initial;
   });
   const [submitting, setSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport(format: "json" | "csv") {
+    setExporting(true);
+    try {
+      await exportDocument(document.id, format);
+    } catch (err) {
+      onError(err);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const confidenceByField = new Map(
     (document.confidence?.fields ?? []).map((f) => [f.field_name, f.composite]),
@@ -188,108 +199,116 @@ export function ReviewScreen({ document, onDone, onError, isAdmin }: Props) {
   const active = sections[activeIndex];
 
   return (
-    <div className="review-screen">
-      <div className="review-panel review-original">
-        <DocumentViewer fileUrl={documentFileUrl(document.id)} filename={document.filename} />
-      </div>
-
-      <div className="review-panel review-fields">
-        <div className="review-panel-header">
-          <h3>Extracted fields</h3>
-          <StatusBadge status={document.status} />
+    <div>
+      <div className="review-screen">
+        <div className="review-panel review-original">
+          <h3 className="review-panel-filename">{document.filename}</h3>
+          <DocumentViewer fileUrl={documentFileUrl(document.id)} filename={document.filename} />
         </div>
 
-        {!isAdmin && (
-          <p className="page-subtitle">
-            Read-only — only Admins can correct fields and approve documents.
-          </p>
-        )}
-
-        <div className="section-tabs">
-          {sections.map((section, i) => (
-            <button
-              key={section.title}
-              className={`section-tab ${i === activeIndex ? "section-tab--active" : ""}`}
-              onClick={() => setActiveIndex(i)}
-            >
-              {section.title}
-            </button>
-          ))}
-        </div>
-
-        {active?.kind === "fields" &&
-          active.fields.map((field) => {
-            const confidence = confidenceByField.get(field);
-            const low = confidence != null && confidence < LOW_CONFIDENCE_THRESHOLD;
-            return (
-              <label key={field} className={low ? "field-low-confidence" : ""}>
-                <div className="field-label-row">
-                  <span className="field-name">{field.replaceAll("_", " ")}</span>
-                  {confidence != null &&
-                    (low ? (
-                      <span className="badge badge-failed">Low confidence</span>
-                    ) : (
-                      <span className="field-confidence">{Math.round(confidence * 100)}%</span>
-                    ))}
-                </div>
-                <input
-                  disabled={!isAdmin}
-                  value={values[field] ?? ""}
-                  onChange={(e) => setValues({ ...values, [field]: e.target.value })}
-                />
-              </label>
-            );
-          })}
-
-        {active?.kind === "skills" && (
-          <label>
-            <div className="field-label-row">
-              <span className="field-name">Skills (comma-separated)</span>
+        <div className="review-panel review-fields">
+          <div className="review-panel-header">
+            <h3>Extracted fields</h3>
+            <div className="review-panel-header-actions">
+              <StatusBadge status={document.status} />
+              <button
+                className="btn-export"
+                disabled={exporting}
+                onClick={() => handleExport("json")}
+              >
+                Export JSON
+              </button>
+              <button
+                className="btn-export"
+                disabled={exporting}
+                onClick={() => handleExport("csv")}
+              >
+                Export CSV
+              </button>
             </div>
-            <input
-              disabled={!isAdmin}
-              value={values[active.key] ?? ""}
-              onChange={(e) => setValues({ ...values, [active.key]: e.target.value })}
-            />
-          </label>
-        )}
+          </div>
 
-        {active?.kind === "table" && (
-          <table className="line-items-table">
-            <thead>
-              <tr>
-                {active.columns.map((col) => (
-                  <th key={col.key}>{col.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(tables[active.key] ?? []).map((row, i) => (
-                <tr key={i}>
+          <div className="section-tabs">
+            {sections.map((section, i) => (
+              <button
+                key={section.title}
+                className={`section-tab ${i === activeIndex ? "section-tab--active" : ""}`}
+                onClick={() => setActiveIndex(i)}
+              >
+                {section.title}
+              </button>
+            ))}
+          </div>
+
+          {active?.kind === "fields" &&
+            active.fields.map((field) => {
+              const confidence = confidenceByField.get(field);
+              const low = confidence != null && confidence < LOW_CONFIDENCE_THRESHOLD;
+              return (
+                <label key={field} className={low ? "field-low-confidence" : ""}>
+                  <div className="field-label-row">
+                    <span className="field-name">{field.replaceAll("_", " ")}</span>
+                    {confidence != null &&
+                      (low ? (
+                        <span className="badge badge-failed">Low confidence</span>
+                      ) : (
+                        <span className="field-confidence">{Math.round(confidence * 100)}%</span>
+                      ))}
+                  </div>
+                  <input
+                    value={values[field] ?? ""}
+                    onChange={(e) => setValues({ ...values, [field]: e.target.value })}
+                  />
+                </label>
+              );
+            })}
+
+          {active?.kind === "skills" && (
+            <label>
+              <div className="field-label-row">
+                <span className="field-name">Skills (comma-separated)</span>
+              </div>
+              <input
+                value={values[active.key] ?? ""}
+                onChange={(e) => setValues({ ...values, [active.key]: e.target.value })}
+              />
+            </label>
+          )}
+
+          {active?.kind === "table" && (
+            <table className="line-items-table">
+              <thead>
+                <tr>
                   {active.columns.map((col) => (
-                    <td key={col.key}>
-                      <input
-                        disabled={!isAdmin}
-                        className={col.numeric ? "qty" : undefined}
-                        value={row[col.key] ?? ""}
-                        onChange={(e) => updateTableCell(active.key, i, col.key, e.target.value)}
-                      />
-                    </td>
+                    <th key={col.key}>{col.label}</th>
                   ))}
                 </tr>
-              ))}
-              {(tables[active.key] ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={active.columns.length} className="page-subtitle">
-                    Nothing extracted here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {(tables[active.key] ?? []).map((row, i) => (
+                  <tr key={i}>
+                    {active.columns.map((col) => (
+                      <td key={col.key}>
+                        <input
+                          className={col.numeric ? "qty" : undefined}
+                          value={row[col.key] ?? ""}
+                          onChange={(e) => updateTableCell(active.key, i, col.key, e.target.value)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {(tables[active.key] ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={active.columns.length} className="page-subtitle">
+                      Nothing extracted here.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
 
-        {isAdmin && (
           <div className="review-actions">
             <button
               className="btn btn-primary"
@@ -302,7 +321,7 @@ export function ReviewScreen({ document, onDone, onError, isAdmin }: Props) {
               Flag for follow-up
             </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
-import { NavLink, useParams } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  isActive ? "nav-link nav-link--active" : "nav-link";
+
 export function TopNav() {
   const { user, logout } = useAuth();
-  const { projectId } = useParams();
+  const isAdmin = user?.role === "admin";
 
   return (
     <nav className="top-nav">
@@ -15,28 +18,26 @@ export function TopNav() {
             DataFactZ <span className="top-nav-brand-sub">Document Extraction</span>
           </span>
         </NavLink>
-        <NavLink to="/" end className={({ isActive }) => (isActive ? "nav-link nav-link--active" : "nav-link")}>
-          Home
+        <NavLink to="/" end className={navLinkClass}>
+          Overview
         </NavLink>
-        {projectId && (
-          <>
-            <NavLink
-              to={`/projects/${projectId}/upload`}
-              className={({ isActive }) => (isActive ? "nav-link nav-link--active" : "nav-link")}
-            >
-              Upload
-            </NavLink>
-            <NavLink
-              to={`/projects/${projectId}/review`}
-              className={({ isActive }) => (isActive ? "nav-link nav-link--active" : "nav-link")}
-            >
-              Review
-            </NavLink>
-          </>
+        <NavLink to="/projects" className={navLinkClass}>
+          Projects
+        </NavLink>
+        {isAdmin && (
+          <NavLink to="/users" className={navLinkClass}>
+            User Management
+          </NavLink>
         )}
+        <NavLink to="/types" className={navLinkClass}>
+          Form Types
+        </NavLink>
+        <NavLink to="/cost" className={navLinkClass}>
+          Usage &amp; Cost
+        </NavLink>
       </div>
       <div className="header-actions">
-        <span className="role-badge">{user?.role === "admin" ? "Admin" : "User"}</span>
+        <span className="role-badge">{isAdmin ? "Admin" : "User"}</span>
         <button className="signout-link" onClick={logout}>
           Sign out
         </button>

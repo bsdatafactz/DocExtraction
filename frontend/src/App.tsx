@@ -2,11 +2,14 @@ import { Navigate, Route, BrowserRouter, Routes, useLocation } from "react-route
 import { AuthProvider, useAuth } from "./AuthContext";
 import { TopNav } from "./components/TopNav";
 import { DocumentDetailPage } from "./pages/DocumentDetailPage";
-import { HomePage } from "./pages/HomePage";
+import { FormTypesPage } from "./pages/FormTypesPage";
 import { LoginPage } from "./pages/LoginPage";
-import { ReviewQueuePage } from "./pages/ReviewQueuePage";
+import { OverviewPage } from "./pages/OverviewPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
 import { SignupPage } from "./pages/SignupPage";
 import { UploadPage } from "./pages/UploadPage";
+import { UsageCostPage } from "./pages/UsageCostPage";
+import { UsersPage } from "./pages/UsersPage";
 import "./App.css";
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +20,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const wide = location.pathname.startsWith("/documents/");
+  const wide = location.pathname.includes("/documents/");
 
   return (
     <div className={`app ${wide ? "app--wide" : ""}`}>
@@ -36,10 +39,43 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedLayout>
-            <HomePage />
+            <OverviewPage />
           </ProtectedLayout>
         }
       />
+      <Route
+        path="/projects"
+        element={
+          <ProtectedLayout>
+            <ProjectsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedLayout>
+            <UsersPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/types"
+        element={
+          <ProtectedLayout>
+            <FormTypesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/cost"
+        element={
+          <ProtectedLayout>
+            <UsageCostPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route path="/projects/:projectId" element={<Navigate to="upload" replace />} />
       <Route
         path="/projects/:projectId/upload"
         element={
@@ -49,15 +85,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/projects/:projectId/review"
-        element={
-          <ProtectedLayout>
-            <ReviewQueuePage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/documents/:documentId"
+        path="/projects/:projectId/documents/:documentId"
         element={
           <ProtectedLayout>
             <DocumentDetailPage />

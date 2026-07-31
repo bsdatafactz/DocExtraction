@@ -12,13 +12,7 @@ interface Props {
   loadingDocumentId: number | null;
 }
 
-export function Queue({
-  documents,
-  onSelect,
-  onDeleted,
-  onError,
-  loadingDocumentId,
-}: Props) {
+export function Queue({ documents, onSelect, onDeleted, onError, loadingDocumentId }: Props) {
   const [pendingDelete, setPendingDelete] = useState<DocumentSummary | null>(null);
 
   async function confirmDelete() {
@@ -44,7 +38,6 @@ export function Queue({
           <tr>
             <th>Filename</th>
             <th>Status</th>
-            <th>Confidence</th>
             <th></th>
           </tr>
         </thead>
@@ -55,18 +48,9 @@ export function Queue({
               <td>
                 <StatusBadge status={doc.status} />
               </td>
-              <td>
-                {doc.aggregate_confidence != null
-                  ? `${Math.round(doc.aggregate_confidence * 100)}%`
-                  : "—"}
-              </td>
               <td className="queue-actions">
                 <button disabled={loadingDocumentId === doc.id} onClick={() => onSelect(doc.id)}>
-                  {loadingDocumentId === doc.id
-                    ? "Loading…"
-                    : doc.status === "needs_review"
-                      ? "Review"
-                      : "View"}
+                  {loadingDocumentId === doc.id ? "Loading…" : "Review"}
                 </button>
                 <button className="btn-danger" onClick={() => setPendingDelete(doc)}>
                   Delete

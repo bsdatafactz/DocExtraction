@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getDocument, listDocuments } from "../api";
-import { useAuth } from "../AuthContext";
 import { DocumentSidebar } from "../components/DocumentSidebar";
 import { ReviewScreen } from "../components/ReviewScreen";
 import type { DocumentDetail, DocumentSummary } from "../types";
@@ -11,9 +10,8 @@ function errorMessage(err: unknown): string {
 }
 
 export function DocumentDetailPage() {
-  const { documentId } = useParams();
+  const { projectId, documentId } = useParams();
   const id = Number(documentId);
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [siblings, setSiblings] = useState<DocumentSummary[]>([]);
@@ -35,7 +33,7 @@ export function DocumentDetailPage() {
 
   return (
     <div>
-      <button className="back-link" onClick={() => navigate(-1)}>
+      <button className="back-link" onClick={() => navigate(`/projects/${projectId}/upload`)}>
         ← Back
       </button>
 
@@ -51,16 +49,17 @@ export function DocumentDetailPage() {
           <DocumentSidebar
             documents={siblings}
             activeId={id}
-            onSelect={(docId) => navigate(`/documents/${docId}`)}
+            onSelect={(docId) =>
+              navigate(`/projects/${document.project_id}/documents/${docId}`, { replace: true })
+            }
           />
           <ReviewScreen
             document={document}
             onDone={() => {
               refresh();
-              navigate(-1);
+              navigate(`/projects/${document.project_id}/upload`);
             }}
             onError={(err) => setError(errorMessage(err))}
-            isAdmin={user?.role === "admin"}
           />
         </div>
       )}

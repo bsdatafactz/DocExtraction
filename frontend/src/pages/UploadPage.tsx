@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { listDocuments } from "../api";
+import { exportProjectDocuments, listDocuments } from "../api";
 import { Queue } from "../components/Queue";
 import { UploadDropzone } from "../components/UploadDropzone";
 import type { DocumentSummary } from "../types";
@@ -17,6 +17,7 @@ export function UploadPage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   // A slow backend response shouldn't cause the next poll tick to pile a
   // second request on top of one that's still in flight.
   const inFlight = useRef(false);
@@ -40,6 +41,17 @@ export function UploadPage() {
     return () => clearInterval(interval);
   }, [refresh]);
 
+  async function handleExport(format: "json" | "csv") {
+    setExporting(true);
+    try {
+      await exportProjectDocuments(id, format);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div>
       {error && (
@@ -53,9 +65,17 @@ export function UploadPage() {
         onUploaded={refresh}
         onError={(err) => setError(`Upload failed: ${errorMessage(err)}`)}
       />
+      <div className="queue-export-row">
+        <button className="btn-export" disabled={exporting} onClick={() => handleExport("json")}>
+          Export project JSON
+        </button>
+        <button className="btn-export" disabled={exporting} onClick={() => handleExport("csv")}>
+          Export project CSV
+        </button>
+      </div>
       <Queue
         documents={documents}
-        onSelect={(docId) => navigate(`/documents/${docId}`)}
+        onSelect={(docId) => navigate(`/projects/${id}/documents/${docId}`)}
         onDeleted={refresh}
         onError={(err) => setError(errorMessage(err))}
         loadingDocumentId={null}

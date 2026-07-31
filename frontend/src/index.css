@@ -19,7 +19,7 @@
   --green-bg: rgba(34, 197, 94, 0.12);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px -8px rgba(0, 0, 0, 0.08);
 
-  font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
+  font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);

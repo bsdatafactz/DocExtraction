@@ -130,3 +130,23 @@ export interface DashboardStats {
   reviewed_count: number;
   daily_uploads: DailyCount[];
 }
+
+export interface ProjectCost {
+  project_id: number;
+  project_name: string;
+  document_count: number;
+  total_cost: number;
+}
+
+export interface UserCost {
+  user_id: number | null;
+  email: string;
+  project_count: number;
+  total_cost: number;
+}
+
+export interface CostSummary {
+  overall_total_cost: number;
+  projects: ProjectCost[];
+  users: UserCost[] | null;
+}
